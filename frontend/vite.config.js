@@ -39,12 +39,13 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1300,
       rollupOptions: {
         output: {
+          // 仅拆分无内部依赖的 echarts。
+          // 注意：不要把 vue / element-plus / vue-router 强行拆成独立 chunk——
+          // 它们互相引用，人工拆包会产生 chunk 间循环依赖，
+          // 生产构建运行时报 "Cannot access 'xx' before initialization" (TDZ) 并白屏。
           manualChunks(id) {
             if (!id.includes('node_modules')) return
             if (id.includes('echarts')) return 'echarts'
-            if (id.includes('element-plus') || id.includes('@element-plus')) return 'element-plus'
-            if (id.includes('vue-router')) return 'vue-router'
-            if (/node_modules\/vue\//.test(id)) return 'vue-core'
           }
         }
       }
