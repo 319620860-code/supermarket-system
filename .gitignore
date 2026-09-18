@@ -12,6 +12,9 @@ frontend/node_modules/
 CloudCode/*/dist/
 CloudCode/node_modules/
 
+# 前端构建产物打包进后端的静态目录（部署时生成，不入库）
+backend/src/main/resources/static/
+
 # ===================== 依赖 =====================
 node_modules/
 *.jar

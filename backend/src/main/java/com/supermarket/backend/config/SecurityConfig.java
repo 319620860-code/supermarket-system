@@ -42,6 +42,15 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/generate-hash").permitAll()
                 // API接口需要认证
                 .requestMatchers("/api/**").authenticated()
+                // 前端静态资源（已打包进本服务的 SPA 页面）放行
+                .requestMatchers(
+                        "/", "/index.html", "/favicon.ico",
+                        "/assets/**", "/static/**",
+                        "/*.js", "/*.css", "/*.png", "/*.jpg", "/*.svg", "/*.ico",
+                        "/*.woff", "/*.woff2", "/*.ttf", "/*.map"
+                ).permitAll()
+                // 其余非 /api 请求（前端 history 路由路径）放行，交由 SPA 处理
+                .anyRequest().permitAll()
             )
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
