@@ -157,4 +157,40 @@
           AND order_status = 'COMPLETED'
           AND payment_status = 'PAID'
     </select>
+
+    <!-- 条件取消（幂等）：仅 UNPAID + CREATED 才能被取消，返回 0 表示状态已变更 -->
+    <update id="cancelIfUnpaid">
+        UPDATE `order`
+        SET order_status = 'CANCELLED',
+            update_time = #{updateTime}
+        WHERE id = #{id}
+          AND payment_status = 'UNPAID'
+          AND order_status = 'CREATED'
+    </update>
+
+    <!-- 条件支付（幂等）：仅 UNPAID + CREATED 才能被支付，返回 0 表示已被支付或已取消 -->
+    <update id="payIfUnpaid">
+        UPDATE `order`
+        SET payment_status = 'PAID',
+            order_status = 'COMPLETED',
+            payment_method = #{paymentMethod},
+            actual_amount = COALESCE(#{actualAmount}, actual_amount),
+            remark = #{remark},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+          AND payment_status = 'UNPAID'
+          AND order_status = 'CREATED'
+    </update>
+
+    <!-- 超时未支付订单（兜底扫描） -->
+    <select id="selectTimeoutUnpaid" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM `order`
+        WHERE payment_status = 'UNPAID'
+          AND order_status = 'CREATED'
+          AND create_time &lt;= #{deadline}
+        ORDER BY create_time ASC
+        LIMIT #{limit}
+    </select>
 </mapper>

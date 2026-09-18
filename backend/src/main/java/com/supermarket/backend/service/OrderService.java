@@ -115,4 +115,27 @@ public interface OrderService {
      * @return 退款后的订单
      */
     Order refundOrder(Long id);
+
+    /**
+     * 超时未支付订单自动取消（幂等）。
+     *
+     * <p>由 RocketMQ 延迟消息消费者调用：校验订单是否确实已超过支付超时时间，
+     * 且仍处于「未支付 + CREATED」，才执行取消并解锁库存；
+     * 已支付/已取消的订单直接忽略，重复投递不会产生副作用。
+     *
+     * @param orderId 订单ID
+     * @return 本次调用是否真正执行了取消
+     */
+    boolean autoCancelIfTimeout(Long orderId);
+
+    /**
+     * 查询已超时未支付的订单（兜底扫描用）。
+     *
+     * <p>仅做查询，不做状态变更；调用方应逐条调用
+     * {@link #autoCancelIfTimeout(Long)} 以经由事务代理单个处理。
+     *
+     * @param limit 单批最大条数
+     * @return 超时未支付订单列表
+     */
+    List<Order> findTimeoutUnpaidOrders(int limit);
 }

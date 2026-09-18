@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.PaymentRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.PaymentRecord">
+        <id column="id" property="id" />
+        <result column="pay_no" property="payNo" />
+        <result column="order_id" property="orderId" />
+        <result column="order_number" property="orderNumber" />
+        <result column="amount" property="amount" />
+        <result column="payment_method" property="paymentMethod" />
+        <result column="status" property="status" />
+        <result column="channel" property="channel" />
+        <result column="transaction_id" property="transactionId" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="pay_time" property="payTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, pay_no, order_id, order_number, amount, payment_method, status, channel,
+        transaction_id, remark, create_time, pay_time, update_time
+    </sql>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM payment_record WHERE id = #{id}
+    </select>
+
+    <select id="selectByPayNo" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM payment_record WHERE pay_no = #{payNo}
+    </select>
+
+    <select id="selectByOrderId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM payment_record WHERE order_id = #{orderId}
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectPendingByOrderId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM payment_record
+        WHERE order_id = #{orderId} AND status = 'PENDING'
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectSuccessByOrderId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" />
+        FROM payment_record
+        WHERE order_id = #{orderId} AND status = 'SUCCESS'
+        ORDER BY pay_time DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.supermarket.backend.entity.PaymentRecord"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO payment_record (
+            pay_no, order_id, order_number, amount, payment_method, status, channel,
+            transaction_id, remark, create_time, pay_time, update_time
+        ) VALUES (
+            #{payNo}, #{orderId}, #{orderNumber}, #{amount}, #{paymentMethod}, #{status}, #{channel},
+            #{transactionId}, #{remark}, #{createTime}, #{payTime}, #{updateTime}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.supermarket.backend.entity.PaymentRecord">
+        UPDATE payment_record
+        SET pay_no = #{payNo},
+            order_id = #{orderId},
+            order_number = #{orderNumber},
+            amount = #{amount},
+            payment_method = #{paymentMethod},
+            status = #{status},
+            channel = #{channel},
+            transaction_id = #{transactionId},
+            remark = #{remark},
+            pay_time = #{payTime},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 幂等置成功：PENDING -> SUCCESS，返回 0 表示已被处理 -->
+    <update id="markSuccessIfPending">
+        UPDATE payment_record
+        SET status = 'SUCCESS',
+            transaction_id = #{transactionId},
+            pay_time = #{payTime},
+            update_time = #{payTime}
+        WHERE pay_no = #{payNo}
+          AND status = 'PENDING'
+    </update>
+
+    <!-- 幂等关闭：PENDING -> CLOSED -->
+    <update id="closeIfPending">
+        UPDATE payment_record
+        SET status = 'CLOSED',
+            update_time = #{updateTime}
+        WHERE pay_no = #{payNo}
+          AND status = 'PENDING'
+    </update>
+
+    <!-- 订单取消时关闭其全部进行中的支付单 -->
+    <update id="closePendingByOrderId">
+        UPDATE payment_record
+        SET status = 'CLOSED',
+            update_time = #{updateTime}
+        WHERE order_id = #{orderId}
+          AND status = 'PENDING'
+    </update>
+</mapper>
