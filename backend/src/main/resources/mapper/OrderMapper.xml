@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.OrderMapper">
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.Order">
+        <id column="id" property="id" />
+        <result column="order_number" property="orderNumber" />
+        <result column="customer_name" property="customerName" />
+        <result column="customer_phone" property="customerPhone" />
+        <result column="cashier_id" property="cashierId" />
+        <result column="cashier_name" property="cashierName" />
+        <result column="operator_id" property="operatorId" />
+        <result column="total_amount" property="totalAmount" />
+        <result column="discount_amount" property="discountAmount" />
+        <result column="actual_amount" property="actualAmount" />
+        <result column="payment_method" property="paymentMethod" />
+        <result column="payment_status" property="paymentStatus" />
+        <result column="order_status" property="orderStatus" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_number, customer_name, customer_phone, cashier_id, cashier_name, operator_id, total_amount, discount_amount, actual_amount, payment_method, payment_status, order_status, remark, create_time, update_time
+    </sql>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM `order`
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByOrderNumber" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM `order`
+        WHERE order_number = #{orderNumber}
+    </select>
+
+    <select id="selectPage" parameterType="java.util.Map" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM `order`
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND order_number LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="customerName != null and customerName != ''">
+            AND customer_name LIKE CONCAT('%', #{customerName}, '%')
+        </if>
+        <if test="cashierId != null and cashierId != ''">
+            AND cashier_id = #{cashierId}
+        </if>
+        <if test="orderStatus != null and orderStatus != ''">
+            AND order_status = #{orderStatus}
+        </if>
+        <if test="paymentStatus != null and paymentStatus != ''">
+            AND payment_status = #{paymentStatus}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND create_time >= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND create_time &lt;= #{endDate}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{start}, #{pageSize}
+    </select>
+
+    <select id="selectCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM `order`
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND order_number LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="customerName != null and customerName != ''">
+            AND customer_name LIKE CONCAT('%', #{customerName}, '%')
+        </if>
+        <if test="cashierId != null and cashierId != ''">
+            AND cashier_id = #{cashierId}
+        </if>
+        <if test="orderStatus != null and orderStatus != ''">
+            AND order_status = #{orderStatus}
+        </if>
+        <if test="paymentStatus != null and paymentStatus != ''">
+            AND payment_status = #{paymentStatus}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND create_time >= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND create_time &lt;= #{endDate}
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="com.supermarket.backend.entity.Order" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `order` (
+            order_number, customer_name, customer_phone, cashier_id, cashier_name, operator_id, total_amount, discount_amount, actual_amount, payment_method, payment_status, order_status, remark, create_time, update_time
+        ) VALUES (
+            #{orderNumber}, #{customerName}, #{customerPhone}, #{cashierId}, #{cashierName}, #{operatorId}, #{totalAmount}, #{discountAmount}, #{actualAmount}, #{paymentMethod}, #{paymentStatus}, #{orderStatus}, #{remark}, #{createTime}, #{updateTime}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.supermarket.backend.entity.Order">
+        UPDATE `order`
+        SET order_number = #{orderNumber},
+            customer_name = #{customerName},
+            customer_phone = #{customerPhone},
+            cashier_id = #{cashierId},
+            cashier_name = #{cashierName},
+            operator_id = #{operatorId},
+            total_amount = #{totalAmount},
+            discount_amount = #{discountAmount},
+            actual_amount = #{actualAmount},
+            payment_method = #{paymentMethod},
+            payment_status = #{paymentStatus},
+            order_status = #{orderStatus},
+            remark = #{remark},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="java.lang.Long">
+        DELETE FROM `order` WHERE id = #{id}
+    </delete>
+
+    <select id="selectByCashierId" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM `order`
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectTodaySales" resultType="java.lang.Double">
+        SELECT SUM(actual_amount) as today_sales
+        FROM `order`
+        WHERE DATE(create_time) = CURDATE()
+        AND order_status = 'COMPLETED'
+        AND payment_status = 'PAID'
+    </select>
+
+    <select id="selectSalesByDateRange" parameterType="map" resultType="java.lang.Double">
+        SELECT COALESCE(SUM(actual_amount), 0) AS total_sales
+        FROM `order`
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+          AND order_status = 'COMPLETED'
+          AND payment_status = 'PAID'
+    </select>
+
+    <!-- 查询指定日期范围的订单数量 -->
+    <select id="selectOrderCountByDateRange" parameterType="map" resultType="java.lang.Integer">
+        SELECT COUNT(*) AS total_orders
+        FROM `order`
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+          AND order_status = 'COMPLETED'
+          AND payment_status = 'PAID'
+    </select>
+</mapper>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.SysPermissionMapper">
+
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.SysPermission">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="type" property="type"/>
+        <result column="path" property="path"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="order_num" property="orderNum"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM sys_permission WHERE id = #{id}
+    </select>
+
+    <select id="selectByCode" resultMap="BaseResultMap">
+        SELECT * FROM sys_permission WHERE code = #{code}
+    </select>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT * FROM sys_permission ORDER BY parent_id, order_num
+    </select>
+
+    <select id="selectAllMenus" resultMap="BaseResultMap">
+        SELECT * FROM sys_permission WHERE type = 1 AND status = 1 ORDER BY parent_id, order_num
+    </select>
+
+    <select id="selectByRoleId" resultMap="BaseResultMap">
+        SELECT p.* FROM sys_permission p
+        JOIN sys_role_permission rp ON p.id = rp.permission_id
+        WHERE rp.role_id = #{roleId} AND p.status = 1
+        ORDER BY p.parent_id, p.order_num
+    </select>
+
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT DISTINCT p.* FROM sys_permission p
+        JOIN sys_role_permission rp ON p.id = rp.permission_id
+        JOIN sys_user_role ur ON rp.role_id = ur.role_id
+        WHERE ur.user_id = #{userId} AND p.status = 1
+        ORDER BY p.parent_id, p.order_num
+    </select>
+
+    <select id="selectByParentId" resultMap="BaseResultMap">
+        SELECT * FROM sys_permission WHERE parent_id = #{parentId} AND status = 1
+        ORDER BY order_num
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_permission (name, code, type, path, parent_id, order_num, status, create_time, update_time)
+        VALUES (#{name}, #{code}, #{type}, #{path}, #{parentId}, #{orderNum}, #{status}, #{createTime}, #{updateTime})
+    </insert>
+
+    <update id="update" parameterType="com.supermarket.backend.entity.SysPermission">
+        UPDATE sys_permission
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="code != null">code = #{code},</if>
+            <if test="type != null">type = #{type},</if>
+            <if test="path != null">path = #{path},</if>
+            <if test="parentId != null">parent_id = #{parentId},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+            <if test="status != null">status = #{status},</if>
+            update_time = #{updateTime}
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM sys_permission WHERE id = #{id}
+    </delete>
+
+</mapper>

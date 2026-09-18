@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.InventoryMapper">
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.Inventory">
+        <id column="id" property="id" />
+        <result column="product_id" property="productId" />
+        <result column="warehouse_id" property="warehouseId" />
+        <result column="quantity" property="quantity" />
+        <result column="locked_quantity" property="lockedQuantity" />
+        <result column="available_quantity" property="availableQuantity" />
+        <result column="unit_cost" property="unitCost" />
+        <result column="status" property="status" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="product_name" property="productName" />
+        <result column="warehouse_name" property="warehouseName" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        i.id, i.product_id, i.warehouse_id, i.quantity, i.locked_quantity, i.available_quantity,
+        i.unit_cost, i.status, i.create_time, i.update_time,
+        p.name AS product_name, w.name AS warehouse_name
+    </sql>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM inventory i
+        LEFT JOIN product p ON i.product_id = p.id
+        LEFT JOIN warehouse w ON i.warehouse_id = w.id
+        WHERE i.id = #{id}
+    </select>
+
+    <select id="selectPage" parameterType="java.util.Map" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM inventory i
+        LEFT JOIN product p ON i.product_id = p.id
+        LEFT JOIN warehouse w ON i.warehouse_id = w.id
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND p.name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="productId != null">
+            AND i.product_id = #{productId}
+        </if>
+        <if test="warehouseId != null">
+            AND i.warehouse_id = #{warehouseId}
+        </if>
+        <if test="status != null">
+            AND i.status = #{status}
+        </if>
+        <if test="stockLevel != null and stockLevel != ''">
+            <choose>
+                <when test="stockLevel == 'shortage'">
+                    AND i.quantity = 0
+                </when>
+                <when test="stockLevel == 'low'">
+                    AND i.quantity &gt; 0 AND p.min_stock IS NOT NULL AND p.min_stock &gt; 0 AND i.quantity &lt;= p.min_stock
+                </when>
+                <when test="stockLevel == 'normal'">
+                    AND (i.quantity &gt; 0 AND (p.min_stock IS NULL OR p.min_stock = 0 OR i.quantity &gt; p.min_stock))
+                </when>
+            </choose>
+        </if>
+        ORDER BY i.update_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM inventory i
+        LEFT JOIN product p ON i.product_id = p.id
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND p.name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="productId != null">
+            AND i.product_id = #{productId}
+        </if>
+        <if test="warehouseId != null">
+            AND i.warehouse_id = #{warehouseId}
+        </if>
+        <if test="status != null">
+            AND i.status = #{status}
+        </if>
+        <if test="stockLevel != null and stockLevel != ''">
+            <choose>
+                <when test="stockLevel == 'shortage'">
+                    AND i.quantity = 0
+                </when>
+                <when test="stockLevel == 'low'">
+                    AND i.quantity &gt; 0 AND p.min_stock IS NOT NULL AND p.min_stock &gt; 0 AND i.quantity &lt;= p.min_stock
+                </when>
+                <when test="stockLevel == 'normal'">
+                    AND (i.quantity &gt; 0 AND (p.min_stock IS NULL OR p.min_stock = 0 OR i.quantity &gt; p.min_stock))
+                </when>
+            </choose>
+        </if>
+    </select>
+
+    <select id="selectByProductId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM inventory i
+        LEFT JOIN product p ON i.product_id = p.id
+        LEFT JOIN warehouse w ON i.warehouse_id = w.id
+        WHERE i.product_id = #{productId}
+    </select>
+
+    <select id="selectByProductIdAndWarehouseId" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM inventory i
+        LEFT JOIN product p ON i.product_id = p.id
+        LEFT JOIN warehouse w ON i.warehouse_id = w.id
+        WHERE i.product_id = #{productId} AND i.warehouse_id = #{warehouseId}
+    </select>
+
+    <insert id="insert" parameterType="com.supermarket.backend.entity.Inventory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO inventory (
+            product_id, warehouse_id, quantity, locked_quantity, available_quantity, unit_cost, status, create_time, update_time
+        ) VALUES (
+            #{productId}, #{warehouseId}, #{quantity}, #{lockedQuantity}, #{availableQuantity}, #{unitCost},
+            #{status}, NOW(), NOW()
+        );
+    </insert>
+
+    <update id="update" parameterType="com.supermarket.backend.entity.Inventory">
+        UPDATE inventory
+        SET 
+            product_id = #{productId},
+            warehouse_id = #{warehouseId},
+            quantity = #{quantity},
+            locked_quantity = #{lockedQuantity},
+            available_quantity = #{availableQuantity},
+            unit_cost = #{unitCost},
+            status = #{status},
+            update_time = NOW()
+        WHERE id = #{id};
+    </update>
+
+    <update id="updateQuantity">
+        UPDATE inventory
+        SET 
+            quantity = #{quantity},
+            update_time = NOW()
+        WHERE id = #{id};
+    </update>
+
+    <!-- 锁定库存：增加锁定数量，减少可用数量 -->
+    <update id="lockStock">
+        UPDATE inventory
+        SET 
+            locked_quantity = locked_quantity + #{quantity},
+            available_quantity = available_quantity - #{quantity},
+            update_time = NOW()
+        WHERE product_id = #{productId} AND warehouse_id = #{warehouseId}
+          AND available_quantity >= #{quantity};
+    </update>
+
+    <!-- 解锁库存：减少锁定数量，增加可用数量 -->
+    <update id="unlockStock">
+        UPDATE inventory
+        SET 
+            locked_quantity = locked_quantity - #{quantity},
+            available_quantity = available_quantity + #{quantity},
+            update_time = NOW()
+        WHERE product_id = #{productId} AND warehouse_id = #{warehouseId}
+          AND locked_quantity >= #{quantity};
+    </update>
+
+    <!-- 扣减锁定库存：减少锁定数量和总库存 -->
+    <update id="deductLockedStock">
+        UPDATE inventory
+        SET 
+            locked_quantity = locked_quantity - #{quantity},
+            quantity = quantity - #{quantity},
+            update_time = NOW()
+        WHERE product_id = #{productId} AND warehouse_id = #{warehouseId}
+          AND locked_quantity >= #{quantity};
+    </update>
+
+    <delete id="delete" parameterType="java.lang.Long">
+        DELETE FROM inventory
+        WHERE id = #{id};
+    </delete>
+</mapper>

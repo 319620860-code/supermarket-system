@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.StockOutRecordMapper">
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.StockOutRecord">
+        <id column="id" property="id" />
+        <result column="batch_number" property="batchNumber" />
+        <result column="product_id" property="productId" />
+        <result column="warehouse_id" property="warehouseId" />
+        <result column="quantity" property="quantity" />
+        <result column="unit_price" property="unitPrice" />
+        <result column="total_price" property="totalPrice" />
+        <result column="out_type" property="outType" />
+        <result column="out_target" property="outTarget" />
+        <result column="target_warehouse_id" property="targetWarehouseId" />
+        <result column="order_id" property="orderId" />
+        <result column="operator_id" property="operatorId" />
+        <result column="remark" property="remark" />
+        <result column="status" property="status" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, batch_number, product_id, warehouse_id, quantity, unit_price, total_price, out_type, out_target, target_warehouse_id, order_id, operator_id, remark, status, create_time, update_time
+    </sql>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_out_record
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByBatchNumber" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_out_record
+        WHERE batch_number = #{batchNumber}
+    </select>
+
+    <select id="selectPage" parameterType="java.util.Map" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_out_record
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND batch_number LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="productId != null">
+            AND product_id = #{productId}
+        </if>
+        <if test="outType != null and outType != ''">
+            AND out_type = #{outType}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND create_time &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND create_time &lt;= #{endDate}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="selectCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM stock_out_record
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND batch_number LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="productId != null">
+            AND product_id = #{productId}
+        </if>
+        <if test="outType != null and outType != ''">
+            AND out_type = #{outType}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND create_time &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND create_time &lt;= #{endDate}
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="com.supermarket.backend.entity.StockOutRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO stock_out_record (
+            batch_number, product_id, warehouse_id, quantity, unit_price, total_price, out_type, out_target, target_warehouse_id, order_id, operator_id, remark, status, create_time, update_time
+        ) VALUES (
+            #{batchNumber}, #{productId}, #{warehouseId}, #{quantity}, #{unitPrice}, #{totalPrice}, #{outType}, #{outTarget}, #{targetWarehouseId}, #{orderId}, #{operatorId}, #{remark}, #{status}, #{createTime}, #{updateTime}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.supermarket.backend.entity.StockOutRecord">
+        UPDATE stock_out_record
+        SET batch_number = #{batchNumber},
+            product_id = #{productId},
+            warehouse_id = #{warehouseId},
+            quantity = #{quantity},
+            unit_price = #{unitPrice},
+            total_price = #{totalPrice},
+            out_type = #{outType},
+            order_id = #{orderId},
+            operator_id = #{operatorId},
+            remark = #{remark},
+            status = #{status},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="java.lang.Long">
+        DELETE FROM stock_out_record WHERE id = #{id}
+    </delete>
+
+    <select id="selectByProductId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_out_record
+        WHERE product_id = #{productId}
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectItemLinesPage" resultType="com.supermarket.backend.dto.StockOutItemLineVO">
+        SELECT
+            sor.id AS id,
+            sor.id AS recordId,
+            sor.batch_number AS recordNo,
+            sor.product_id AS productId,
+            p.name AS productName,
+            p.specification AS specification,
+            p.unit AS unit,
+            sor.unit_price AS unitPrice,
+            sor.quantity AS quantity,
+            sor.total_price AS lineAmount,
+            sor.out_type AS outType,
+            sor.operator_id AS operatorId,
+            COALESCE(op.real_name, op.username) AS operatorName,
+            sor.remark AS remark,
+            sor.create_time AS createTime
+        FROM stock_out_record sor
+        LEFT JOIN product p ON p.id = sor.product_id
+        LEFT JOIN `order` o ON o.id = sor.order_id
+        LEFT JOIN sys_user op ON op.id = sor.operator_id
+        ORDER BY sor.create_time DESC, sor.id ASC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="selectItemLinesCount" resultType="int">
+        SELECT COUNT(*) FROM stock_out_record
+    </select>
+</mapper>

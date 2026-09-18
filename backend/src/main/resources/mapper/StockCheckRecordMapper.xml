@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.StockCheckRecordMapper">
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.StockCheckRecord">
+        <id column="id" property="id" />
+        <result column="check_number" property="checkNumber" />
+        <result column="product_id" property="productId" />
+        <result column="actual_quantity" property="actualQuantity" />
+        <result column="system_quantity" property="systemQuantity" />
+        <result column="difference" property="difference" />
+        <result column="unit_price" property="unitPrice" />
+        <result column="difference_amount" property="differenceAmount" />
+        <result column="operator_id" property="operatorId" />
+        <result column="remark" property="remark" />
+        <result column="status" property="status" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, check_number, product_id, actual_quantity, system_quantity, difference, unit_price, difference_amount, operator_id, remark, status, create_time, update_time
+    </sql>
+
+    <select id="selectById" parameterType="java.lang.Long" resultType="java.util.Map">
+        SELECT
+            scr.id AS id,
+            scr.check_number AS checkNumber,
+            scr.product_id AS productId,
+            p.name AS productName,
+            p.specification AS specification,
+            p.unit AS unit,
+            scr.actual_quantity AS actualQuantity,
+            scr.system_quantity AS systemQuantity,
+            scr.difference AS difference,
+            scr.unit_price AS unitPrice,
+            scr.difference_amount AS differenceAmount,
+            scr.operator_id AS operatorId,
+            COALESCE(op.real_name, op.username) AS operatorName,
+            scr.remark AS remark,
+            scr.status AS status,
+            scr.create_time AS createTime
+        FROM stock_check_record scr
+        LEFT JOIN product p ON p.id = scr.product_id
+        LEFT JOIN sys_user op ON op.id = scr.operator_id
+        WHERE scr.id = #{id}
+    </select>
+
+    <select id="selectByCheckNumber" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_check_record
+        WHERE check_number = #{checkNumber}
+    </select>
+
+    <select id="selectPage" parameterType="java.util.Map" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_check_record
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND check_number LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="productId != null">
+            AND product_id = #{productId}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND create_time >= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND create_time &lt;= #{endDate}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="selectCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM stock_check_record
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND check_number LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="productId != null">
+            AND product_id = #{productId}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND create_time >= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND create_time &lt;= #{endDate}
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="com.supermarket.backend.entity.StockCheckRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO stock_check_record (
+            check_number, product_id, actual_quantity, system_quantity, difference, unit_price, difference_amount, operator_id, remark, status, create_time, update_time
+        ) VALUES (
+            #{checkNumber}, #{productId}, #{actualQuantity}, #{systemQuantity}, #{difference}, #{unitPrice}, #{differenceAmount}, #{operatorId}, #{remark}, #{status}, #{createTime}, #{updateTime}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.supermarket.backend.entity.StockCheckRecord">
+        UPDATE stock_check_record
+        SET check_number = #{checkNumber},
+            product_id = #{productId},
+            actual_quantity = #{actualQuantity},
+            system_quantity = #{systemQuantity},
+            difference = #{difference},
+            unit_price = #{unitPrice},
+            difference_amount = #{differenceAmount},
+            operator_id = #{operatorId},
+            remark = #{remark},
+            status = #{status},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="java.lang.Long">
+        DELETE FROM stock_check_record WHERE id = #{id}
+    </delete>
+
+    <select id="selectByProductId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_check_record
+        WHERE product_id = #{productId}
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectItemLinesPage" resultType="java.util.Map">
+        SELECT
+            scr.id AS id,
+            scr.check_number AS checkNumber,
+            scr.product_id AS productId,
+            p.name AS productName,
+            p.specification AS specification,
+            p.unit AS unit,
+            scr.actual_quantity AS actualQuantity,
+            scr.system_quantity AS systemQuantity,
+            scr.difference AS difference,
+            scr.unit_price AS unitPrice,
+            scr.difference_amount AS differenceAmount,
+            scr.operator_id AS operatorId,
+            COALESCE(op.real_name, op.username) AS operatorName,
+            scr.remark AS remark,
+            scr.status AS status,
+            scr.create_time AS createTime
+        FROM stock_check_record scr
+        LEFT JOIN product p ON p.id = scr.product_id
+        LEFT JOIN sys_user op ON op.id = scr.operator_id
+        ORDER BY scr.create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="selectItemLinesCount" resultType="int">
+        SELECT COUNT(*) FROM stock_check_record
+    </select>
+</mapper>

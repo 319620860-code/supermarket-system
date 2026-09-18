@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.StockInRecordMapper">
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.StockInRecord">
+        <id column="id" property="id" />
+        <result column="batch_number" property="batchNumber" />
+        <result column="product_id" property="productId" />
+        <result column="warehouse_id" property="warehouseId" />
+        <result column="supplier_id" property="supplierId" />
+        <result column="operator_id" property="operatorId" />
+        <result column="quantity" property="quantity" />
+        <result column="unit_price" property="unitPrice" />
+        <result column="total_price" property="totalPrice" />
+        <result column="remark" property="remark" />
+        <result column="status" property="status" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, batch_number, product_id, warehouse_id, supplier_id, operator_id, quantity, unit_price, total_price, remark, status, create_time, update_time
+    </sql>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_in_record
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByBatchNumber" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_in_record
+        WHERE batch_number = #{batchNumber}
+    </select>
+
+    <select id="selectPage" parameterType="java.util.Map" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_in_record
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND batch_number LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="productId != null">
+            AND product_id = #{productId}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND create_time &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND create_time &lt;= #{endDate}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="selectCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM stock_in_record
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND batch_number LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="productId != null">
+            AND product_id = #{productId}
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND create_time &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND create_time &lt;= #{endDate}
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="com.supermarket.backend.entity.StockInRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO stock_in_record (
+            batch_number, product_id, warehouse_id, supplier_id, operator_id, quantity, unit_price, total_price, remark, status, create_time, update_time
+        ) VALUES (
+            #{batchNumber}, #{productId}, #{warehouseId}, #{supplierId}, #{operatorId}, #{quantity}, #{unitPrice}, #{totalPrice}, #{remark}, #{status}, #{createTime}, #{updateTime}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.supermarket.backend.entity.StockInRecord">
+        UPDATE stock_in_record
+        SET batch_number = #{batchNumber},
+            product_id = #{productId},
+            warehouse_id = #{warehouseId},
+            supplier_id = #{supplierId},
+            operator_id = #{operatorId},
+            quantity = #{quantity},
+            unit_price = #{unitPrice},
+            total_price = #{totalPrice},
+            remark = #{remark},
+            status = #{status},
+            update_time = #{updateTime}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="delete" parameterType="java.lang.Long">
+        DELETE FROM stock_in_record WHERE id = #{id}
+    </delete>
+
+    <select id="selectByProductId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM stock_in_record
+        WHERE product_id = #{productId}
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectItemLinesPage" resultType="com.supermarket.backend.dto.StockInItemLineVO">
+        SELECT
+            sir.id AS id,
+            sir.id AS recordId,
+            sir.batch_number AS recordNo,
+            sir.product_id AS productId,
+            p.name AS productName,
+            p.specification AS specification,
+            p.unit AS unit,
+            sir.unit_price AS unitPrice,
+            sir.quantity AS quantity,
+            sir.total_price AS lineAmount,
+            sir.supplier_id AS supplierId,
+            sup.name AS supplierName,
+            sir.operator_id AS operatorId,
+            COALESCE(op.real_name, op.username) AS operatorName,
+            sir.remark AS remark,
+            sir.create_time AS createTime
+        FROM stock_in_record sir
+        LEFT JOIN product p ON p.id = sir.product_id
+        LEFT JOIN supplier sup ON sup.id = sir.supplier_id
+        LEFT JOIN sys_user op ON op.id = sir.operator_id
+        ORDER BY sir.create_time DESC, sir.id ASC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="selectItemLinesCount" resultType="int">
+        SELECT COUNT(*) FROM stock_in_record
+    </select>
+
+    <select id="selectSupplierReport" resultType="java.util.Map">
+        SELECT
+        sir.supplier_id as supplier_id,
+        sup.name as supplier_name,
+        sup.contact_person as contact_person,
+        sup.contact_phone as contact_phone,
+        COUNT(sir.id) as supply_count,
+        SUM(sir.quantity) as total_quantity,
+        SUM(sir.total_price) as total_amount
+        FROM stock_in_record sir
+        LEFT JOIN supplier sup ON sup.id = sir.supplier_id
+        WHERE 1=1
+        <if test="startDate != null and startDate != ''">
+            AND sir.create_time &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND sir.create_time &lt;= #{endDate}
+        </if>
+        GROUP BY sir.supplier_id, sup.name, sup.contact_person, sup.contact_phone
+        ORDER BY total_amount DESC
+    </select>
+</mapper>

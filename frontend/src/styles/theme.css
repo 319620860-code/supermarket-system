@@ -1,0 +1,63 @@
+/**
+ * 超市信息管理系统 — 全局视觉主题（生鲜/零售：青绿主色 + 清爽背景）
+ * 在 main.js 中于 element-plus 样式之后引入。
+ */
+:root {
+  /* 品牌主色：鲜绿 / 青绿 */
+  --sm-primary: #0d9488;
+  --sm-primary-dark: #0f766e;
+  --sm-primary-darker: #115e59;
+  --sm-primary-light: #14b8a6;
+  --sm-primary-soft: #ccfbf1;
+  --sm-accent: #ea580c;
+
+  /* 登录 / 注册页大背景 */
+  --sm-gradient-page: linear-gradient(145deg, #0f766e 0%, #134e4a 35%, #0c4a6e 100%);
+  /* 卡片头部、主按钮 */
+  --sm-gradient-hero: linear-gradient(135deg, #14b8a6 0%, #0d9488 45%, #047857 100%);
+  --sm-gradient-btn: linear-gradient(135deg, #2dd4bf 0%, #0d9488 55%, #0f766e 100%);
+
+  /* 应用主背景、侧栏 */
+  --sm-bg-app: #ecfdf5;
+  --sm-bg-main: #f0fdfa;
+  --sm-sidebar-bg: linear-gradient(180deg, #115e59 0%, #0f172a 72%);
+  --sm-sidebar-border: rgba(45, 212, 191, 0.22);
+  --sm-menu-active: #5eead4;
+  --sm-header-shadow: 0 1px 0 rgba(13, 148, 136, 0.12), 0 4px 24px rgba(15, 118, 110, 0.08);
+
+  /* Element Plus 主色链（与默认生成色阶接近即可） */
+  --el-color-primary: #0d9488;
+  --el-color-primary-light-3: #5eead4;
+  --el-color-primary-light-5: #99f6e4;
+  --el-color-primary-light-7: #ccfbf1;
+  --el-color-primary-light-8: #e6fffa;
+  --el-color-primary-light-9: #f0fdfa;
+  --el-color-primary-dark-2: #0f766e;
+
+  /* 布局 */
+  --sm-aside-width: 220px;
+  --sm-header-height: 56px;
+  --sm-main-padding: 20px 24px 28px;
+  --sm-content-max: 1440px;
+  --sm-radius-lg: 12px;
+  --sm-radius-md: 10px;
+  --sm-card-border: rgba(13, 148, 136, 0.1);
+  --sm-card-shadow: 0 1px 2px rgba(15, 118, 110, 0.06), 0 4px 24px rgba(15, 118, 110, 0.06);
+}
+
+html,
+body {
+  background-color: var(--sm-bg-app);
+}
+
+/* 主内容区内常见卡片：统一圆角与阴影 */
+#app .main-inner .el-card {
+  border-radius: var(--sm-radius-lg);
+  border: 1px solid var(--sm-card-border);
+  box-shadow: var(--sm-card-shadow);
+}
+
+#app .main-inner .el-card.is-always-shadow,
+#app .main-inner .el-card.is-hover-shadow:hover {
+  box-shadow: var(--sm-card-shadow);
+}

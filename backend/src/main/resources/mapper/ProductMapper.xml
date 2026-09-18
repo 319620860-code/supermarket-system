@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.ProductMapper">
+    
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.Product">
+        <id column="id" property="id" />
+        <result column="name" property="name" />
+        <result column="barcode" property="barcode" />
+        <result column="category_id" property="categoryId" />
+        <result column="category_name" property="categoryName" />
+        <result column="specification" property="specification" />
+        <result column="unit" property="unit" />
+        <result column="purchase_price" property="purchasePrice" />
+        <result column="selling_price" property="sellingPrice" />
+        <result column="quantity" property="quantity" />
+        <result column="min_stock" property="minStock" />
+        <result column="description" property="description" />
+        <result column="status" property="status" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+    
+    <sql id="Base_Column_List">
+        p.id, p.name, p.barcode, p.category_id, c.name as category_name, p.specification, p.unit,
+        p.purchase_price, p.selling_price, p.quantity, p.min_stock, p.description, p.status,
+        p.create_time, p.update_time
+    </sql>
+
+    <!-- 名称、主档条码，或任意子 SKU 的编码/条码/规格说明 -->
+    <sql id="Keyword_Filter">
+        <if test="keyword != null and keyword != ''">
+            AND (
+                p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR p.barcode LIKE CONCAT('%', #{keyword}, '%')
+                OR EXISTS (
+                    SELECT 1 FROM product_sku ps
+                    WHERE ps.product_id = p.id
+                    AND (
+                        ps.sku_code LIKE CONCAT('%', #{keyword}, '%')
+                        OR (ps.barcode IS NOT NULL AND ps.barcode LIKE CONCAT('%', #{keyword}, '%'))
+                        OR ps.specification LIKE CONCAT('%', #{keyword}, '%')
+                    )
+                )
+            )
+        </if>
+    </sql>
+    
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM product p
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE p.id = #{id}
+    </select>
+    
+    <select id="selectByBarcode" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM product p
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE p.barcode = #{barcode}
+    </select>
+    
+    <select id="selectPage" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM product p
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE 1=1
+        <include refid="Keyword_Filter"/>
+        <if test="categoryId != null">
+            AND (
+                p.category_id = #{categoryId}
+                OR p.category_id IN (SELECT id FROM category WHERE parent_id = #{categoryId})
+            )
+        </if>
+        <if test="status != null">
+            AND p.status = #{status}
+        </if>
+        <if test="forSale != null and forSale">
+            AND p.status = 1 AND c.status = 1
+        </if>
+        ORDER BY p.create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+    
+    <select id="selectCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM product p
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE 1=1
+        <include refid="Keyword_Filter"/>
+        <if test="categoryId != null">
+            AND (
+                p.category_id = #{categoryId}
+                OR p.category_id IN (SELECT id FROM category WHERE parent_id = #{categoryId})
+            )
+        </if>
+        <if test="status != null">
+            AND p.status = #{status}
+        </if>
+        <if test="forSale != null and forSale">
+            AND p.status = 1 AND c.status = 1
+        </if>
+    </select>
+    
+    <insert id="insert" parameterType="com.supermarket.backend.entity.Product" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO product (name, barcode, category_id, specification, unit, purchase_price, selling_price, quantity, min_stock, description, status, create_time, update_time)
+        VALUES (#{name}, #{barcode}, #{categoryId}, #{specification}, #{unit}, #{purchasePrice}, #{sellingPrice}, #{quantity}, #{minStock}, #{description}, #{status}, #{createTime}, #{updateTime})
+    </insert>
+    
+    <update id="update" parameterType="com.supermarket.backend.entity.Product">
+        UPDATE product
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="barcode != null">barcode = #{barcode},</if>
+            <if test="categoryId != null">category_id = #{categoryId},</if>
+            <if test="specification != null">specification = #{specification},</if>
+            <if test="unit != null">unit = #{unit},</if>
+            <if test="purchasePrice != null">purchase_price = #{purchasePrice},</if>
+            <if test="sellingPrice != null">selling_price = #{sellingPrice},</if>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="minStock != null">min_stock = #{minStock},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="status != null">status = #{status},</if>
+            update_time = #{updateTime}
+        </set>
+        WHERE id = #{id}
+    </update>
+    
+    <update id="updateStock">
+        UPDATE product
+        SET quantity = #{quantity}
+        WHERE id = #{id}
+    </update>
+
+    <update id="syncQuantityFromSkus">
+        UPDATE product p
+        SET p.quantity = (
+            SELECT COALESCE(SUM(s.quantity), 0) FROM product_sku s WHERE s.product_id = #{productId} AND s.status = 1
+        ),
+        p.update_time = NOW()
+        WHERE p.id = #{productId}
+    </update>
+    
+    <delete id="delete">
+        DELETE FROM product
+        WHERE id = #{id}
+    </delete>
+
+    <select id="selectInventoryReport" resultType="java.util.Map">
+        SELECT
+        p.id,
+        p.name,
+        p.barcode,
+        c.name as category_name,
+        p.specification,
+        p.unit,
+        p.quantity as quantity,
+        p.min_stock,
+        p.purchase_price,
+        p.selling_price,
+        (p.quantity * p.purchase_price) as inventory_value
+        FROM product p
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE 1=1
+        <include refid="Keyword_Filter"/>
+        <if test="categoryId != null">
+            AND p.category_id = #{categoryId}
+        </if>
+        <if test="status != null">
+            AND p.status = #{status}
+        </if>
+        ORDER BY p.category_id, p.name
+    </select>
+
+    <select id="selectLowInventory" resultType="java.util.Map">
+        SELECT
+        p.id,
+        p.name,
+        p.barcode,
+        c.name as category_name,
+        p.specification,
+        p.unit,
+        p.quantity,
+        p.min_stock,
+        p.purchase_price,
+        p.selling_price
+        FROM product p
+        LEFT JOIN category c ON p.category_id = c.id
+        WHERE p.quantity &lt;= p.min_stock
+        <include refid="Keyword_Filter"/>
+        <if test="categoryId != null">
+            AND p.category_id = #{categoryId}
+        </if>
+        <if test="status != null">
+            AND p.status = #{status}
+        </if>
+        ORDER BY p.quantity DESC
+    </select>
+</mapper>

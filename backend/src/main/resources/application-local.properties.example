@@ -1,0 +1,11 @@
+# 本地敏感配置模板：复制为 application-local.properties（已在项目根 .gitignore 中忽略）
+# Spring Boot 会自动加载 application-local.properties（与 application.properties 同目录）
+#
+# Windows PowerShell 临时设置环境变量示例：
+#   $env:DB_PASSWORD="你的密码"
+#   $env:JWT_SECRET="至少32位的随机十六进制串"
+#
+# 或使用本文件覆盖（推荐团队内各机自用，勿提交）：
+
+# spring.datasource.password=
+# jwt.secret=

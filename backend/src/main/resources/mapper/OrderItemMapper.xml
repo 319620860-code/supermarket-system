@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.OrderItemMapper">
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.OrderItem">
+        <id column="id" property="id" />
+        <result column="order_id" property="orderId" />
+        <result column="product_id" property="productId" />
+        <result column="sku_id" property="skuId" />
+        <result column="sku_code" property="skuCode" />
+        <result column="product_name" property="productName" />
+        <result column="specification" property="specification" />
+        <result column="unit" property="unit" />
+        <result column="price" property="price" />
+        <result column="quantity" property="quantity" />
+        <result column="amount" property="amount" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, order_id, product_id, sku_id, sku_code, product_name, specification, unit, price, quantity, amount
+    </sql>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM order_item
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByOrderId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM order_item
+        WHERE order_id = #{orderId}
+    </select>
+
+    <select id="selectByOrderNumber" parameterType="java.lang.String" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM order_item oi
+        INNER JOIN `order` o ON oi.order_id = o.id
+        WHERE o.order_number = #{orderNumber}
+    </select>
+
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO order_item (
+            order_id, product_id, sku_id, sku_code, product_name, specification, unit, price, quantity, amount
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.orderId}, #{item.productId}, #{item.skuId}, #{item.skuCode}, #{item.productName}, #{item.specification}, #{item.unit}, #{item.price}, #{item.quantity}, #{item.amount})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByOrderId" parameterType="java.lang.Long">
+        DELETE FROM order_item WHERE order_id = #{orderId}
+    </delete>
+
+    <!-- 展示名用商品表当前名称，避免明细里历史英文快照导致排行仍为英文 -->
+    <select id="selectProductSalesStatistics" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+            oi.product_id AS product_id,
+            p.name AS product_name,
+            SUM(oi.quantity) AS total_quantity,
+            SUM(oi.amount) AS salesAmount
+        FROM order_item oi
+        INNER JOIN product p ON oi.product_id = p.id
+        WHERE oi.order_id IN (
+            SELECT id FROM `order`
+            WHERE order_status = 'COMPLETED'
+            AND payment_status = 'PAID'
+            <if test="startDate != null and endDate != null">
+                AND create_time BETWEEN #{startDate} AND #{endDate}
+            </if>
+        )
+        GROUP BY oi.product_id, p.name
+        ORDER BY salesAmount DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <select id="selectCashierSalesStatistics" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+            cashier_id,
+            cashier_name,
+            COUNT(id) as orderCount,
+            SUM(actual_amount) as salesAmount
+        FROM `order`
+        WHERE create_time BETWEEN #{startDate} AND #{endDate}
+        AND order_status = 'COMPLETED'
+        AND payment_status = 'PAID'
+        GROUP BY cashier_id, cashier_name
+        ORDER BY salesAmount DESC
+    </select>
+
+    <select id="selectDailySalesStatistics" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+            <if test="type == 'daily'">
+                DATE(create_time) as date,
+                DATE(create_time) as period,
+            </if>
+            <if test="type == 'monthly'">
+                DATE_FORMAT(create_time, '%Y-%m') as month,
+                DATE_FORMAT(create_time, '%Y-%m') as period,
+            </if>
+            <if test="type != 'daily' and type != 'monthly'">
+                'total' as type,
+                'total' as period,
+            </if>
+            COUNT(id) as orderCount,
+            SUM(actual_amount) as salesAmount
+        FROM `order`
+        WHERE order_status = 'COMPLETED'
+        AND payment_status = 'PAID'
+        <if test="startDate != null and endDate != null">
+            AND create_time BETWEEN #{startDate} AND #{endDate}
+        </if>
+        <if test="type == 'daily'">
+            GROUP BY DATE(create_time)
+            ORDER BY date
+        </if>
+        <if test="type == 'monthly'">
+            GROUP BY DATE_FORMAT(create_time, '%Y-%m')
+            ORDER BY month
+        </if>
+    </select>
+
+    <select id="selectProductSalesProfit" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+            oi.product_id,
+            oi.product_name,
+            SUM(oi.quantity) as salesVolume,
+            SUM(oi.amount) as salesAmount,
+            SUM(p.purchase_price * oi.quantity) as totalCost,
+            (SUM(oi.amount) - SUM(p.purchase_price * oi.quantity)) as profit
+        FROM order_item oi
+        INNER JOIN product p ON oi.product_id = p.id
+        WHERE oi.order_id IN (
+            SELECT id FROM `order`
+            WHERE create_time BETWEEN #{startDate} AND #{endDate}
+            AND order_status = 'COMPLETED'
+            AND payment_status = 'PAID'
+        )
+        GROUP BY oi.product_id, oi.product_name
+        ORDER BY profit DESC
+    </select>
+</mapper>

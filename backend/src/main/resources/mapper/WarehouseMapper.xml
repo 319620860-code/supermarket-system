@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.backend.mapper.WarehouseMapper">
+    <resultMap id="BaseResultMap" type="com.supermarket.backend.entity.Warehouse">
+        <id column="id" property="id" />
+        <result column="name" property="name" />
+        <result column="type" property="type" />
+        <result column="address" property="address" />
+        <result column="contact_person" property="contactPerson" />
+        <result column="phone" property="phone" />
+        <result column="status" property="status" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, type, address, contact_person, phone, status, create_time, update_time
+    </sql>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM warehouse
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectPage" parameterType="java.util.Map" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM warehouse
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND (name LIKE CONCAT('%', #{keyword}, '%') OR address LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="name != null and name != ''">
+            AND name LIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="type != null">
+            AND type = #{type}
+        </if>
+        <if test="address != null and address != ''">
+            AND address LIKE CONCAT('%', #{address}, '%')
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM warehouse
+        WHERE 1=1
+        <if test="keyword != null and keyword != ''">
+            AND (name LIKE CONCAT('%', #{keyword}, '%') OR address LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="name != null and name != ''">
+            AND name LIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="type != null">
+            AND type = #{type}
+        </if>
+        <if test="address != null and address != ''">
+            AND address LIKE CONCAT('%', #{address}, '%')
+        </if>
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="com.supermarket.backend.entity.Warehouse" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO warehouse (
+            name, type, address, contact_person, phone, status, create_time, update_time
+        ) VALUES (
+            #{name}, #{type}, #{address}, #{contactPerson}, #{phone}, #{status}, NOW(), NOW()
+        );
+    </insert>
+
+    <update id="update" parameterType="com.supermarket.backend.entity.Warehouse">
+        UPDATE warehouse
+        SET 
+            name = #{name},
+            type = #{type},
+            address = #{address},
+            contact_person = #{contactPerson},
+            phone = #{phone},
+            status = #{status},
+            update_time = NOW()
+        WHERE id = #{id};
+    </update>
+
+    <delete id="delete" parameterType="java.lang.Long">
+        DELETE FROM warehouse
+        WHERE id = #{id};
+    </delete>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List" />
+        FROM warehouse
+        WHERE status = 1
+        ORDER BY name ASC
+    </select>
+</mapper>
